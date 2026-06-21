@@ -1,0 +1,73 @@
+name: コード譜を自動生成
+
+# コード表.xlsx が更新されたとき、または手動実行・スケジュールで起動
+on:
+  push:
+    branches: [main]
+    paths:
+      - "コード表.xlsx"
+      - "scripts/generate_chords.py"
+  workflow_dispatch: {}
+
+# GitHub Pagesへのデプロイに必要な権限
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Python環境を準備
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 日本語フォントをインストール
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk fonts-dejavu-core
+
+      - name: 依存パッケージをインストール
+        run: pip install openpyxl pillow
+
+      - name: コード譜画像を生成
+        run: python scripts/generate_chords.py
+
+      - name: 生成物をコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/chords docs/manifest.json
+          if git diff --cached --quiet; then
+            echo "変更なし。コミットをスキップします。"
+          else
+            git commit -m "コード譜画像を自動更新"
+            git push
+          fi
+
+      - name: Pages用に整形
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: GitHub Pagesへデプロイ
+        id: deployment
+        uses: actions/deploy-pages@v4
