@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ウクレレ コード譜</title>
+<style>
+  :root{
+    --ink:#0b0b0c;
+    --ink-2:#161616;
+    --paper:#f5f1e8;
+    --paper-dim:#cfc8b8;
+    --brass:#c9a24b;
+    --brass-dim:#8a743a;
+    --line: rgba(245,241,232,0.14);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:"Hiragino Sans","Noto Sans JP","Helvetica Neue",Arial,sans-serif;
+    min-height:100vh;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    position:relative;
+    padding:64px 24px 40px;
+    overflow:hidden;
+    border-bottom:1px solid var(--line);
+  }
+  .strings{
+    position:absolute;
+    inset:0;
+    display:flex;
+    justify-content:space-evenly;
+    padding:0 18%;
+    pointer-events:none;
+    opacity:0.5;
+  }
+  .strings span{
+    width:1px;
+    background:linear-gradient(to bottom, transparent, var(--brass-dim) 15%, var(--brass-dim) 85%, transparent);
+  }
+  .header-inner{
+    position:relative;
+    z-index:1;
+    max-width:880px;
+    margin:0 auto;
+    text-align:center;
+  }
+  .eyebrow{
+    font-size:13px;
+    letter-spacing:0.28em;
+    color:var(--brass);
+    text-transform:uppercase;
+    margin:0 0 14px;
+    font-weight:600;
+  }
+  h1{
+    font-size:clamp(40px, 8vw, 72px);
+    font-weight:800;
+    margin:0;
+    letter-spacing:-0.01em;
+    line-height:1.05;
+  }
+  .sub{
+    margin:18px auto 0;
+    max-width:520px;
+    color:var(--paper-dim);
+    font-size:15px;
+    line-height:1.7;
+  }
+
+  /* ---------- Controls ---------- */
+  .controls{
+    max-width:1080px;
+    margin:0 auto;
+    padding:28px 24px 0;
+  }
+  .search{
+    width:100%;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 16px;
+    color:var(--paper);
+    font-size:16px;
+    outline:none;
+    transition:border-color 0.15s ease;
+  }
+  .search:focus{ border-color:var(--brass); }
+  .search::placeholder{ color:var(--paper-dim); }
+
+  .root-tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin:20px 0 0;
+  }
+  .root-tab{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--paper-dim);
+    border-radius:999px;
+    padding:8px 16px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:all 0.15s ease;
+    font-family:inherit;
+  }
+  .root-tab:hover{
+    border-color:var(--brass-dim);
+    color:var(--paper);
+  }
+  .root-tab.active{
+    background:var(--brass);
+    border-color:var(--brass);
+    color:var(--ink);
+  }
+
+  /* ---------- Grid ---------- */
+  main{
+    max-width:1080px;
+    margin:0 auto;
+    padding:32px 24px 80px;
+  }
+  .sheet-section{
+    margin-bottom:40px;
+  }
+  .sheet-title{
+    font-size:13px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--brass);
+    font-weight:700;
+    margin:0 0 14px;
+    padding-bottom:10px;
+    border-bottom:1px solid var(--line);
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(140px,1fr));
+    gap:14px;
+  }
+  .card{
+    background:#000;
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+    cursor:pointer;
+    transition:transform 0.15s ease, border-color 0.15s ease;
+  }
+  .card:hover{
+    transform:translateY(-3px);
+    border-color:var(--brass);
+  }
+  .card img{
+    width:100%;
+    display:block;
+    image-rendering:pixelated;
+  }
+  .empty-msg{
+    text-align:center;
+    color:var(--paper-dim);
+    padding:60px 20px;
+    display:none;
+  }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.85);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:24px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{
+    background:#000;
+    border:1px solid var(--brass-dim);
+    border-radius:14px;
+    padding:20px;
+    max-width:360px;
+    width:100%;
+    text-align:center;
+  }
+  .modal-box img{
+    width:100%;
+    image-rendering:pixelated;
+    border-radius:6px;
+  }
+  .modal-close{
+    margin-top:14px;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--paper-dim);
+    border-radius:8px;
+    padding:8px 18px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .modal-close:hover{ color:var(--paper); border-color:var(--brass); }
+
+  footer{
+    text-align:center;
+    padding:30px 20px 50px;
+    color:var(--paper-dim);
+    font-size:12px;
+    border-top:1px solid var(--line);
+  }
+  footer a{ color:var(--brass); text-decoration:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="strings">
+    <span></span><span></span><span></span><span></span>
+  </div>
+  <div class="header-inner">
+    <p class="eyebrow">Ukulele Chord Book</p>
+    <h1>コード譜</h1>
+    <p class="sub">Excelの運指表から自動生成された、ウクレレコードダイアグラム一覧。
+      コード表.xlsx が更新されると、ここも自動で更新されます。</p>
+  </div>
+</header>
+
+<div class="controls">
+  <input class="search" id="search" type="text" placeholder="コード名で検索 (例: Cm7, G♭, Bdim) ...">
+  <div class="root-tabs" id="rootTabs"></div>
+</div>
+
+<main id="main"></main>
+<p class="empty-msg" id="emptyMsg">該当するコードが見つかりませんでした。</p>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <img id="modalImg" src="" alt="">
+    <button class="modal-close" id="modalClose">閉じる</button>
+  </div>
+</div>
+
+<footer>
+  Generated automatically via GitHub Actions &middot;
+  <a href="https://github.com/" id="repoLink">View source</a>
+</footer>
+
+<script>
+async function init(){
+  const res = await fetch('manifest.json');
+  const data = await res.json();
+
+  // グルーピング(シート順を保持)
+  const sheetOrder = [];
+  const bySheet = {};
+  data.forEach(item => {
+    if(!bySheet[item.sheet]){ bySheet[item.sheet]=[]; sheetOrder.push(item.sheet); }
+    bySheet[item.sheet].push(item);
+  });
+
+  const rootTabs = document.getElementById('rootTabs');
+  const allBtn = document.createElement('button');
+  allBtn.className = 'root-tab active';
+  allBtn.textContent = 'すべて';
+  allBtn.dataset.sheet = '__all__';
+  rootTabs.appendChild(allBtn);
+
+  sheetOrder.forEach(sheet => {
+    const btn = document.createElement('button');
+    btn.className = 'root-tab';
+    btn.textContent = sheet;
+    btn.dataset.sheet = sheet;
+    rootTabs.appendChild(btn);
+  });
+
+  let activeSheet = '__all__';
+  let query = '';
+
+  function normalize(str){
+    return str
+      .toLowerCase()
+      .replace(/♭/g, 'b')
+      .replace(/♯|#/g, 's')
+      .replace(/−|ー|-/g, '-')
+      .trim();
+  }
+
+  function render(){
+    const main = document.getElementById('main');
+    main.innerHTML = '';
+    let totalShown = 0;
+    const q = normalize(query);
+
+    sheetOrder.forEach(sheet => {
+      if(activeSheet !== '__all__' && activeSheet !== sheet) return;
+      const items = bySheet[sheet].filter(it => normalize(it.name).includes(q));
+      if(items.length === 0) return;
+      totalShown += items.length;
+
+      const section = document.createElement('section');
+      section.className = 'sheet-section';
+
+      const title = document.createElement('h2');
+      title.className = 'sheet-title';
+      title.textContent = sheet;
+      section.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+
+      items.forEach(it => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<img src="chords/${it.file}" alt="${it.name}" loading="lazy">`;
+        card.addEventListener('click', () => openModal(it));
+        grid.appendChild(card);
+      });
+
+      section.appendChild(grid);
+      main.appendChild(section);
+    });
+
+    document.getElementById('emptyMsg').style.display = totalShown === 0 ? 'block' : 'none';
+  }
+
+  rootTabs.addEventListener('click', e => {
+    const btn = e.target.closest('.root-tab');
+    if(!btn) return;
+    activeSheet = btn.dataset.sheet;
+    [...rootTabs.children].forEach(b => b.classList.toggle('active', b===btn));
+    render();
+  });
+
+  document.getElementById('search').addEventListener('input', e => {
+    query = e.target.value.trim();
+    render();
+  });
+
+  function openModal(item){
+    document.getElementById('modalImg').src = `chords/${item.file}`;
+    document.getElementById('modalImg').alt = item.name;
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+  document.getElementById('modalClose').addEventListener('click', () => {
+    document.getElementById('modalOverlay').classList.remove('open');
+  });
+  document.getElementById('modalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'modalOverlay') e.target.classList.remove('open');
+  });
+
+  render();
+}
+init();
+</script>
+
+</body>
+</html>
