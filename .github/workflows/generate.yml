@@ -53,7 +53,11 @@ jobs:
             echo "変更なし。コミットをスキップします。"
           else
             git commit -m "コード譜画像を自動更新"
-            git push
+            for i in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "push失敗。リトライします ($i/3)..."
+              sleep 5
+            done
           fi
 
       - name: Pages用に整形
