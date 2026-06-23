@@ -32,6 +32,11 @@ WORK_DIR = "_xlsx_extract_tmp"
 NUM_STRINGS = 4   # ウクレレ
 NUM_FRETS = 5     # 表示するフレット数
 
+# コード名タイトルのフォントサイズ(全コード共通の固定値)。
+# Excel側もコード名はすべて48pt固定のため、画像側も統一する。
+# 最長のコード名(例: "C7(no3)")でも画像幅(166px)に収まるよう計算した値。
+TITLE_FONT_SIZE = 38
+
 
 # ----------------------------------------------------------------------------
 # 1. xlsxを展開してdrawing XMLを取得
@@ -209,40 +214,37 @@ def safe_filename(name):
     return out
 
 
-def draw_chord_image(name, shapes_data, start_fret=1, size=(166, 163)):
-    W, H = size
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))  # 背景は完全透明
-    draw = ImageDraw.Draw(img)
-
+def draw_chord_image(name, shapes_data, start_fret=1):
+    """
+    フォントサイズとフレット1個分の幅は固定値を使う。コード名が長い場合は
+    画像の横幅が自動的に広がる(画像サイズを揃えて文字を縮小する、という
+    やり方はしない)。
+    """
     WHITE = (255, 255, 255, 255)  # 不透明な白(線・文字・丸)
-
-    # レイアウト定数(元画像の比率を再現)
-    title_h = int(H * 0.58)
-    bottom_margin = int(H * 0.04)  # 最下段の弦の丸が画像外に見切れないための余白
-    grid_top = title_h
-    grid_bottom = H - 1 - bottom_margin
-    grid_right = W - 1
-
     is_open_position = start_fret == 1
 
-    # 0フレット(ナット)を表す太い縦線の幅を左端に確保する。
-    # ハイポジション(start_fret != 1)の場合はナットの太線は引かず、
-    # 代わりに開始フレット番号を表示するための余白を確保する。
-    if is_open_position:
-        nut_w = max(3, int(W * 0.045))
-    else:
-        nut_w = max(1, int(W * 0.009))
-    fret_label_w = int(W * 0.10) if not is_open_position else 0
-    grid_left = nut_w + fret_label_w
+    # --- 固定基準値(元画像 166x163, 5フレット表示を基準に算出) ---
+    FRET_W = 28          # フレット1個分の幅(px)。元画像相当(32.8px)よりやや狭くする
+    STRING_GAP = 18       # 弦と弦の間隔(px)
+    TITLE_H = 95          # タイトル(コード名)エリアの高さ(px)
+    SIDE_MARGIN = 4       # グリッド左右の余白(px)
+    TOP_PAD = 0           # グリッド上端の追加余白
+    BOTTOM_PAD_OPEN = 8   # 最下段の丸が見切れないための余白(オープンポジション)
+    BOTTOM_PAD_HIGH = 24  # ハイポジション時は開始フレット番号の表示分を確保
 
-    grid_h = grid_bottom - grid_top
-    grid_w = grid_right - grid_left
+    nut_w = 7 if is_open_position else 2
+    line_w = 2
 
-    fret_w = grid_w / NUM_FRETS
-    # 弦(横線)は NUM_STRINGS 本。弦と弦の間隔は (NUM_STRINGS-1) 個分。
-    string_gap = grid_h / (NUM_STRINGS - 1)
+    grid_w = NUM_FRETS * FRET_W
+    grid_h = (NUM_STRINGS - 1) * STRING_GAP
+    bottom_pad = BOTTOM_PAD_OPEN if is_open_position else BOTTOM_PAD_HIGH
 
-    # タイトル(コード名)
+    grid_top = TITLE_H + TOP_PAD
+    grid_left = nut_w + SIDE_MARGIN
+    grid_right = grid_left + grid_w
+    grid_bottom = grid_top + grid_h
+
+    # --- フォント準備 ---
     font_path = None
     for fp in (
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Black.ttc",
@@ -253,29 +255,47 @@ def draw_chord_image(name, shapes_data, start_fret=1, size=(166, 163)):
         if os.path.exists(fp):
             font_path = fp
             break
+    font = (
+        ImageFont.truetype(font_path, TITLE_FONT_SIZE, index=0)
+        if font_path
+        else ImageFont.load_default()
+    )
 
-    text = name
-    max_text_w = W - int(W * 0.06)  # 左右マージン分を確保
-    font_size = int(title_h * 0.6)
-    min_font_size = int(title_h * 0.28)
-    while font_size > min_font_size:
-        font = ImageFont.truetype(font_path, font_size, index=0) if font_path else ImageFont.load_default()
-        bbox = draw.textbbox((0, 0), text, font=font)
-        tw = bbox[2] - bbox[0]
-        if tw <= max_text_w:
-            break
-        font_size -= 2
-    bbox = draw.textbbox((0, 0), text, font=font)
-    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    margin_left = int(W * 0.03)
-    draw.text((margin_left - bbox[0], (title_h - th) / 2 - bbox[1]), text, fill=WHITE, font=font)
+    # --- 画像全体の幅を決める(タイトル文字幅 と グリッド幅 の大きい方) ---
+    margin_left = 5
+    margin_right = 8
+    tmp_img = Image.new("RGBA", (10, 10))
+    tmp_draw = ImageDraw.Draw(tmp_img)
+    bbox = tmp_draw.textbbox((0, 0), name, font=font)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
 
-    # ナット(0フレット)の線(左端)。オープンポジションのみ太線にする。
+    content_w = max(grid_right + SIDE_MARGIN, margin_left + text_w + margin_right)
+    W = int(content_w) + 1
+    H = int(grid_bottom + bottom_pad) + 1
+
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))  # 背景は完全透明
+    draw = ImageDraw.Draw(img)
+
+    # --- タイトル(コード名)描画 ---
+    draw.text((margin_left - bbox[0], (TITLE_H - text_h) / 2 - bbox[1]), name, fill=WHITE, font=font)
+
+    # --- ナット(0フレット)の線(左端)。オープンポジションのみ太線にする。 ---
     draw.line([(grid_left, grid_top), (grid_left, grid_bottom)], fill=WHITE, width=nut_w)
 
-    # ハイポジションの場合、グリッド左に開始フレット番号を小さく表示する
+    # --- 縦線(フレットの区切り線) ---
+    for i in range(1, NUM_FRETS + 1):
+        x = grid_left + i * FRET_W
+        draw.line([(x, grid_top), (x, grid_bottom)], fill=WHITE, width=line_w)
+
+    # --- 横線(弦): NUM_STRINGS本、等間隔 ---
+    for j in range(NUM_STRINGS):
+        y = grid_top + j * STRING_GAP
+        draw.line([(grid_left, y), (grid_right, y)], fill=WHITE, width=line_w)
+
+    # --- ハイポジションの場合、開始フレット番号を一番下の弦の下に表示する ---
     if not is_open_position:
-        label_font_size = max(10, int(string_gap * 0.9))
+        label_font_size = 14
         label_font = (
             ImageFont.truetype(font_path, label_font_size, index=0)
             if font_path
@@ -284,34 +304,23 @@ def draw_chord_image(name, shapes_data, start_fret=1, size=(166, 163)):
         label_text = str(start_fret)
         lbbox = draw.textbbox((0, 0), label_text, font=label_font)
         lw, lh = lbbox[2] - lbbox[0], lbbox[3] - lbbox[1]
-        label_x = nut_w + (fret_label_w - lw) / 2 - lbbox[0]
-        label_y = grid_top + (string_gap - lh) / 2 - lbbox[1]
+        label_x = grid_left - lw / 2 - lbbox[0]
+        label_y = grid_bottom + (bottom_pad - lh) / 2 - lbbox[1]
         draw.text((label_x, label_y), label_text, fill=WHITE, font=label_font)
 
-    # 縦線(フレットの区切り線): ナットの右、フレット1〜5の右端まで
-    line_w = max(1, int(W * 0.009))
-    for i in range(1, NUM_FRETS + 1):
-        x = grid_left + i * fret_w
-        draw.line([(x, grid_top), (x, grid_bottom)], fill=WHITE, width=line_w)
-
-    # 横線(弦): NUM_STRINGS本、等間隔
-    for j in range(NUM_STRINGS):
-        y = grid_top + j * string_gap
-        draw.line([(grid_left, y), (grid_right, y)], fill=WHITE, width=line_w)
-
-    # セーハ・丸 (string番号 = 上から何本目の弦(線)か。1始まり)
+    # --- セーハ・丸 (string番号 = 上から何本目の弦(線)か。1始まり) ---
     for sd in shapes_data:
         fret = sd["fret"]
-        cx = grid_left + (fret - 0.5) * fret_w
+        cx = grid_left + (fret - 0.5) * FRET_W
         if sd["type"] == "dot":
             string = sd["string"]
-            cy = grid_top + (string - 1) * string_gap
-            r = min(fret_w, string_gap) * 0.32
+            cy = grid_top + (string - 1) * STRING_GAP
+            r = min(FRET_W, STRING_GAP) * 0.32
             draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=WHITE)
         else:  # bar (セーハ): string_from弦からstring_to弦までを結ぶ縦長カプセル
-            y_top = grid_top + (sd["string_from"] - 1) * string_gap
-            y_bot = grid_top + (sd["string_to"] - 1) * string_gap
-            r = fret_w * 0.30
+            y_top = grid_top + (sd["string_from"] - 1) * STRING_GAP
+            y_bot = grid_top + (sd["string_to"] - 1) * STRING_GAP
+            r = FRET_W * 0.30
             pad = r * 0.5
             draw.rounded_rectangle(
                 [cx - r, y_top - pad, cx + r, y_bot + pad], radius=r, fill=WHITE
