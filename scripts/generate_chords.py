@@ -34,9 +34,9 @@ NUM_FRETS = 5     # 表示するフレット数
 
 # コード名タイトルのフォントサイズ(全コード共通の固定値)。
 # Excel側のコード名フォントは HGPゴシックE 48pt で全コード共通、
-# フレット1個分の実寸は約49px(Excel実測値)。この比率(48pt/49px ≈ 1.306)を
-# 維持して、フレット幅24pxに対応するフォントサイズを算出している。
-TITLE_FONT_SIZE = 31
+# フレット1個分の実寸は約49px(Excel実測値)。実際のサンプル画像(F7-5)を
+# ピクセル解析し、文字高さ/フレット幅 ≈ 1.286 の比率を求めて算出した値。
+TITLE_FONT_SIZE = 40
 
 
 # ----------------------------------------------------------------------------
@@ -224,14 +224,17 @@ def draw_chord_image(name, shapes_data, start_fret=1):
     WHITE = (255, 255, 255, 255)  # 不透明な白(線・文字・丸)
     is_open_position = start_fret == 1
 
-    # --- 固定基準値(元画像 166x163, 5フレット表示の比率を基準に算出) ---
-    FRET_W = 24           # フレット1個分の幅(px)。元画像相当(32.8px)より狭くする
-    STRING_GAP = 21       # 弦と弦の間隔(px)。Excel実測(43px:フレット幅49px)の比率を維持
-    TITLE_H = 34          # タイトル(コード名)エリアの高さ(px)
-    SIDE_MARGIN = 4       # グリッド左右の余白(px)
-    TOP_PAD = 0           # グリッド上端の追加余白
-    BOTTOM_PAD_OPEN = 7   # 最下段の丸が見切れないための余白(オープンポジション)
-    BOTTOM_PAD_HIGH = 20  # ハイポジション時は開始フレット番号の表示分を確保
+    # --- 固定基準値(サンプル画像 F7-5.png のピクセル実測値を基準に算出) ---
+    # 実測: フレット幅49px, 弦間隔43px, ナット幅15px, 丸の直径34px,
+    #       文字top余白19px, 文字高さ63px, 文字下端からグリッド上端までの間隔25px
+    FRET_W = 24            # フレット1個分の幅(px)
+    STRING_GAP = 21        # 弦と弦の間隔(px) (43/49 の比率)
+    TITLE_TOP_MARGIN = 9   # 画像上端から文字上端までの余白(px) (19/49 の比率)
+    TITLE_GRID_GAP = 12    # 文字下端からグリッド上端までの間隔(px) (25/49 の比率)
+    SIDE_MARGIN = 4        # グリッド左右の余白(px)
+    BOTTOM_PAD_OPEN = 7    # 最下段の丸が見切れないための余白(オープンポジション)
+    BOTTOM_PAD_HIGH = 20   # ハイポジション時は開始フレット番号の表示分を確保
+    DOT_DIAMETER = 16.5    # 押弦マーカー(丸)の直径(px) (34/49 の比率)
 
     nut_w = 7 if is_open_position else 2
     line_w = 2
@@ -239,11 +242,8 @@ def draw_chord_image(name, shapes_data, start_fret=1):
     grid_w = NUM_FRETS * FRET_W
     grid_h = (NUM_STRINGS - 1) * STRING_GAP
     bottom_pad = BOTTOM_PAD_OPEN if is_open_position else BOTTOM_PAD_HIGH
-
-    grid_top = TITLE_H + TOP_PAD
     grid_left = nut_w + SIDE_MARGIN
     grid_right = grid_left + grid_w
-    grid_bottom = grid_top + grid_h
 
     # --- フォント準備 ---
     font_path = None
@@ -271,6 +271,11 @@ def draw_chord_image(name, shapes_data, start_fret=1):
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
 
+    # 文字は上寄せで配置し、その下に固定の間隔を空けてグリッドを置く
+    text_y = TITLE_TOP_MARGIN
+    grid_top = text_y + text_h + TITLE_GRID_GAP
+    grid_bottom = grid_top + grid_h
+
     content_w = max(grid_right + SIDE_MARGIN, margin_left + text_w + margin_right)
     W = int(content_w) + 1
     H = int(grid_bottom + bottom_pad) + 1
@@ -279,7 +284,7 @@ def draw_chord_image(name, shapes_data, start_fret=1):
     draw = ImageDraw.Draw(img)
 
     # --- タイトル(コード名)描画 ---
-    draw.text((margin_left - bbox[0], (TITLE_H - text_h) / 2 - bbox[1]), name, fill=WHITE, font=font)
+    draw.text((margin_left - bbox[0], text_y - bbox[1]), name, fill=WHITE, font=font)
 
     # --- ナット(0フレット)の線(左端)。オープンポジションのみ太線にする。 ---
     draw.line([(grid_left, grid_top), (grid_left, grid_bottom)], fill=WHITE, width=nut_w)
@@ -316,7 +321,7 @@ def draw_chord_image(name, shapes_data, start_fret=1):
         if sd["type"] == "dot":
             string = sd["string"]
             cy = grid_top + (string - 1) * STRING_GAP
-            r = min(FRET_W, STRING_GAP) * 0.32
+            r = DOT_DIAMETER / 2
             draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=WHITE)
         else:  # bar (セーハ): string_from弦からstring_to弦までを結ぶ縦長カプセル
             y_top = grid_top + (sd["string_from"] - 1) * STRING_GAP
