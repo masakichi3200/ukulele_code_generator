@@ -34,8 +34,8 @@ NUM_FRETS = 5     # 表示するフレット数
 
 # コード名タイトルのフォントサイズ(全コード共通の固定値)。
 # Excel側もコード名はすべて48pt固定のため、画像側も統一する。
-# 最長のコード名(例: "C7(no3)")でも画像幅(166px)に収まるよう計算した値。
-TITLE_FONT_SIZE = 38
+# 元画像で「A」1文字の幅がフレット1個分の幅とほぼ同じになる比率を基準に算出した値。
+TITLE_FONT_SIZE = 34
 
 
 # ----------------------------------------------------------------------------
@@ -223,14 +223,14 @@ def draw_chord_image(name, shapes_data, start_fret=1):
     WHITE = (255, 255, 255, 255)  # 不透明な白(線・文字・丸)
     is_open_position = start_fret == 1
 
-    # --- 固定基準値(元画像 166x163, 5フレット表示を基準に算出) ---
-    FRET_W = 28          # フレット1個分の幅(px)。元画像相当(32.8px)よりやや狭くする
-    STRING_GAP = 18       # 弦と弦の間隔(px)
-    TITLE_H = 95          # タイトル(コード名)エリアの高さ(px)
+    # --- 固定基準値(元画像 166x163, 5フレット表示の比率を基準に算出) ---
+    FRET_W = 24           # フレット1個分の幅(px)。元画像相当(32.8px)より狭くする
+    STRING_GAP = 13       # 弦と弦の間隔(px)
+    TITLE_H = 38          # タイトル(コード名)エリアの高さ(px)
     SIDE_MARGIN = 4       # グリッド左右の余白(px)
     TOP_PAD = 0           # グリッド上端の追加余白
-    BOTTOM_PAD_OPEN = 8   # 最下段の丸が見切れないための余白(オープンポジション)
-    BOTTOM_PAD_HIGH = 24  # ハイポジション時は開始フレット番号の表示分を確保
+    BOTTOM_PAD_OPEN = 7   # 最下段の丸が見切れないための余白(オープンポジション)
+    BOTTOM_PAD_HIGH = 20  # ハイポジション時は開始フレット番号の表示分を確保
 
     nut_w = 7 if is_open_position else 2
     line_w = 2
@@ -295,7 +295,7 @@ def draw_chord_image(name, shapes_data, start_fret=1):
 
     # --- ハイポジションの場合、開始フレット番号を一番下の弦の下に表示する ---
     if not is_open_position:
-        label_font_size = 14
+        label_font_size = 16
         label_font = (
             ImageFont.truetype(font_path, label_font_size, index=0)
             if font_path
