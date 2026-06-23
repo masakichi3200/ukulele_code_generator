@@ -226,7 +226,7 @@ def draw_chord_image(name, shapes_data, start_fret=1):
 
     # --- 固定基準値(元画像 166x163, 5フレット表示の比率を基準に算出) ---
     FRET_W = 24           # フレット1個分の幅(px)。元画像相当(32.8px)より狭くする
-    STRING_GAP = 13       # 弦と弦の間隔(px)
+    STRING_GAP = 21       # 弦と弦の間隔(px)。Excel実測(43px:フレット幅49px)の比率を維持
     TITLE_H = 34          # タイトル(コード名)エリアの高さ(px)
     SIDE_MARGIN = 4       # グリッド左右の余白(px)
     TOP_PAD = 0           # グリッド上端の追加余白
