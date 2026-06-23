@@ -176,7 +176,7 @@ def shapes_in_block(shapes, block):
 
     results = []
     for s in shapes:
-        fret = s["from_col"] - col0  # 1,2,3,4,5
+        fret = s["from_col"] - col0 + 1  # 1,2,3,4,5
         if not (1 <= fret <= NUM_FRETS):
             continue
         if s["type"] == "flowChartTerminator":
@@ -218,8 +218,9 @@ def draw_chord_image(name, shapes_data, start_fret=1, size=(166, 163)):
 
     # レイアウト定数(元画像の比率を再現)
     title_h = int(H * 0.58)
+    bottom_margin = int(H * 0.04)  # 最下段の弦の丸が画像外に見切れないための余白
     grid_top = title_h
-    grid_bottom = H - 1
+    grid_bottom = H - 1 - bottom_margin
     grid_right = W - 1
 
     is_open_position = start_fret == 1
