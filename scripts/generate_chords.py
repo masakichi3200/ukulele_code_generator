@@ -315,9 +315,12 @@ def draw_chord_image(name, shapes_data, start_fret=1):
         draw.text((label_x, label_y), label_text, fill=WHITE, font=label_font)
 
     # --- セーハ・丸 (string番号 = 上から何本目の弦(線)か。1始まり) ---
+    FRET1_DOT_SHIFT = 4  # フレット1の丸がナットの太線に重ならないよう右にずらす量(px)
     for sd in shapes_data:
         fret = sd["fret"]
         cx = grid_left + (fret - 0.5) * FRET_W
+        if sd["type"] == "dot" and fret == 1:
+            cx += FRET1_DOT_SHIFT
         if sd["type"] == "dot":
             string = sd["string"]
             cy = grid_top + (string - 1) * STRING_GAP
