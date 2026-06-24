@@ -234,7 +234,7 @@ def draw_chord_image(name, shapes_data, start_fret=1):
     SIDE_MARGIN = 4        # グリッド左右の余白(px)
     BOTTOM_PAD_OPEN = 7    # 最下段の丸が見切れないための余白(オープンポジション)
     BOTTOM_PAD_HIGH = 20   # ハイポジション時は開始フレット番号の表示分を確保
-    DOT_DIAMETER = 16.5    # 押弦マーカー(丸)の直径(px) (34/49 の比率)
+    DOT_DIAMETER = 14      # 押弦マーカー(丸)の直径(px)。ナットや隣接フレット線に重ならないよう調整
 
     nut_w = 7 if is_open_position else 2
     line_w = 2
@@ -315,12 +315,9 @@ def draw_chord_image(name, shapes_data, start_fret=1):
         draw.text((label_x, label_y), label_text, fill=WHITE, font=label_font)
 
     # --- セーハ・丸 (string番号 = 上から何本目の弦(線)か。1始まり) ---
-    FRET1_DOT_SHIFT = 4  # フレット1の丸がナットの太線に重ならないよう右にずらす量(px)
     for sd in shapes_data:
         fret = sd["fret"]
         cx = grid_left + (fret - 0.5) * FRET_W
-        if sd["type"] == "dot" and fret == 1:
-            cx += FRET1_DOT_SHIFT
         if sd["type"] == "dot":
             string = sd["string"]
             cy = grid_top + (string - 1) * STRING_GAP
