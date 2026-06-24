@@ -326,7 +326,7 @@ def draw_chord_image(name, shapes_data, start_fret=1):
         else:  # bar (セーハ): string_from弦からstring_to弦までを結ぶ縦長カプセル
             y_top = grid_top + (sd["string_from"] - 1) * STRING_GAP
             y_bot = grid_top + (sd["string_to"] - 1) * STRING_GAP
-            r = FRET_W * 0.30
+            r = FRET_W * 0.22
             pad = r * 0.5
             draw.rounded_rectangle(
                 [cx - r, y_top - pad, cx + r, y_bot + pad], radius=r, fill=WHITE
